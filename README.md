@@ -8,6 +8,12 @@ code examples, and recommended practices to help you orchestrate intelligent age
 - [Starting up Camunda 8 Run](#starting-up-camunda-8-run)
 - [Create and deploy a BPMN process](#create-and-deploy-a-bpmn-process)
   - [Start a process instance (Modeler Play)](#start-a-process-instance-modeler-play)
+- [Integrate into an LLM](#integrate-into-an-llm)
+  - [Option A: OpenAI Connector](#option-a-openai-connector)
+  - [Option B: REST Outbound (LM Studio or custom)](#option-b-rest-outbound-lm-studio-or-custom)
+  - [Map the result](#map-the-result)
+  - [Deploy and test](#deploy-and-test)
+  - [Troubleshooting (LLM integration)](#troubleshooting-llm-integration)
 
 ## Prerequisites
 - OpenJDK 21–23: Required to run Camunda 8 Java components.
@@ -75,7 +81,7 @@ Follow these steps to model and deploy a minimal process from the Camunda Deskto
 - Save as `ai-fraud-check.bpmn` in your workspace folder.
 
 **Reference diagram and interface of the Camunda Desktop Modeler:**
-![AI Fraud Check BPMN](img/img.png)
+![AI Fraud Check BPMN](img.png)
 
 4) Configure the deployment target
 - Click the “Deploy” rocket icon in the bottom-left.
@@ -127,5 +133,73 @@ Troubleshooting
 - Cannot start instance: verify the Process Id is `ai-fraud-check` and the variables JSON is valid.
 
 **Congratulations! You have successfully created, deployed, and started your first process in Camunda 8.**
+
+## Integrate into an LLM
+In this step, you will call an LLM from your process. You can either:
+- Use the OpenAI Connector (best for OpenAI API and compatible providers), or
+- Use the REST Outbound Connector (works with LM Studio).
+
+During the workshop you will receive API credentials if needed. If you use LM Studio, start its local server and note the base URL (default: `http://localhost:1234/api/v0/chat/completions`).
+
+Add a Service Task to your BPMN and apply one of the connector options below.
+![LLM Service Task](../LLMTask.png)
+
+### Option A: OpenAI Connector
+Best for OpenAI API. In the Service Task properties, select a outbound Connector: OpenAI.
+
+Recommended fields:
+- Authentication: set your API Key (store as a secret if possible).
+- Model: `gpt-4o-mini` (or any available model in your account).
+- Messages:
+  - System message:
+    - Content (FEEL expression):
+      `= "You are a fraud assistant. Return only one or more of: email,human,fraud (comma-separated, lowercase)."`
+  - User message:
+    - Content (FEEL expression using process variables):
+      `= "Evaluate potential fraud for " || fullName || " (DOB " || dob || "). Total Income " || string(totalIncome) || 
+      ", Total Expenses " || string(totalExpenses) || ", Charitable Donations " || charitableDonations || 
+      ", Large purchases: " || string(join(largePurchases, ", "))`
+- Temperature: `0.2`
+
+
+### Option B: REST Outbound 
+Use this when calling LM Studio's HTTP API.
+
+Request configuration:
+- Method: `POST`
+- URL: `http://localhost:1234/v1/chat/completions`
+- Headers:
+  - `Content-Type: application/json` 
+- Body (FEEL or JSON with embedded FEEL):
+```json
+{
+  "model": "qwen2.5-7b-instruct",
+  "messages": [
+    {"role": "system", "content": "You are a fraud assistant. Return only: email,human,fraud (comma-separated)."},
+    {"role": "user", "content": "Evaluate potential fraud for ${fullName} (DOB ${dob}). Total Income ${totalIncome}, Total Expenses ${totalExpenses}, Charitable Donations ${charitableDonations}, Large purchases: ${join(largePurchases, ', ')}"}
+  ],
+  "temperature": 0.2,
+  "stream": false
+}
+```
+
+### Map the result
+Map the LLM response to a process variable so you can inspect it in Operate or use it later in the flow.
+
+```
+{response: response.body}
+```
+
+### Deploy and test
+1) Deploy the updated process.
+2) Start a new instance using the same JSON payload from the previous section.
+3) In Operate, open the instance → Variables. You should see `response` containing the LLM’s decision, for example: `"email,human"` or `"fraud"`.
+
+### Troubleshooting (LLM integration)
+- 401/403 Unauthorized: Check the API key/secret configuration.
+- Connection refused: Ensure LM Studio’s server is running and the URL/port is correct (`/v1/chat/completions`).
+- Model not found: Use a model name that exists locally (LM Studio) or in your provider account.
+- Invalid JSON body: Validate FEEL expressions and quotes in the request body
+
 
 
