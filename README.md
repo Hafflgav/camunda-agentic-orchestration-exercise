@@ -7,25 +7,24 @@ code examples, and recommended practices to help you orchestrate intelligent age
 - [Prerequisites](#prerequisites)
 - [Starting up Camunda 8 Run](#starting-up-camunda-8-run)
 - [Create and deploy a BPMN process](#create-and-deploy-a-bpmn-process)
-  - [Start a process instance (Modeler Play)](#start-a-process-instance-modeler-play)
+  - [Start a process instance](#start-a-process-instance)
 - [Integrate into an LLM](#integrate-into-an-llm)
   - [Option A: OpenAI Connector](#option-a-openai-connector)
-  - [Option B: REST Outbound (LM Studio or custom)](#option-b-rest-outbound-lm-studio-or-custom)
+  - [Option B: REST Outbound](#option-b-rest-outbound)
   - [Map the result](#map-the-result)
   - [Deploy and test](#deploy-and-test)
   - [Troubleshooting (LLM integration)](#troubleshooting-llm-integration)
- - [Reacting on the LLM result](#reacting-on-the-llm-result)
-   - [Normalize the LLM output (Script Task)](#normalize-the-llm-output-script-task)
-   - [Drive an Ad-Hoc Subprocess from the list](#drive-an-ad-hoc-subprocess-from-the-list)
-   - [Escalation for fraud detection](#escalation-for-fraud-detection)
-   - [Add gateway conditions](#add-gateway-conditions)
-   - [Deploy and test the reaction flow](#deploy-and-test-the-reaction-flow)
- - [Using Forms in Processes](#using-forms-in-processes)
-   - [Create a form in Camunda Modeler](#create-a-form-in-camunda-modeler)
-   - [Bind fields to process variables](#bind-fields-to-process-variables)
-   - [Link the form to a User Task](#link-the-form-to-a-user-task)
-   - [Deploy and test in Tasklist](#deploy-and-test-in-tasklist)
-   - [Troubleshooting (Forms)](#troubleshooting-forms)
+- [Reacting on the LLM result](#reacting-on-the-llm-result)
+  - [Normalize the LLM output (Script Task)](#normalize-the-llm-output-script-task)
+  - [Drive an Ad-Hoc Subprocess from the list](#drive-an-ad-hoc-subprocess-from-the-list)
+  - [Escalation for fraud detection](#escalation-for-fraud-detection)
+  - [Add gateway conditions](#add-gateway-conditions)
+  - [Deploy and test the reaction flow](#deploy-and-test-the-reaction-flow)
+- [Using Forms in Processes](#using-forms-in-processes)
+  - [Create a form in Camunda Modeler](#create-a-form-in-camunda-modeler)
+  - [Bind fields to process variables](#bind-fields-to-process-variables)
+  - [Link the form to a User Task](#link-the-form-to-a-user-task)
+  - [Deploy and test in Tasklist](#deploy-and-test-in-tasklist)
 
 ## Prerequisites
 - OpenJDK 21–23: Required to run Camunda 8 Java components.
@@ -316,6 +315,7 @@ Example:
 - A Text Area with Key `humanNotes` will store a string with the reviewer’s notes.
 
 Reference:
+
 ![Field options](img/FieldOptions.png)
 
 Tips:
