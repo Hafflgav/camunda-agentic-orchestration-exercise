@@ -14,6 +14,12 @@ code examples, and recommended practices to help you orchestrate intelligent age
   - [Map the result](#map-the-result)
   - [Deploy and test](#deploy-and-test)
   - [Troubleshooting (LLM integration)](#troubleshooting-llm-integration)
+ - [Reacting on the LLM result](#reacting-on-the-llm-result)
+   - [Normalize the LLM output (Script Task)](#normalize-the-llm-output-script-task)
+   - [Drive an Ad-Hoc Subprocess from the list](#drive-an-ad-hoc-subprocess-from-the-list)
+   - [Escalation for fraud detection](#escalation-for-fraud-detection)
+   - [Add gateway conditions](#add-gateway-conditions)
+   - [Deploy and test the reaction flow](#deploy-and-test-the-reaction-flow)
 
 ## Prerequisites
 - OpenJDK 21–23: Required to run Camunda 8 Java components.
@@ -81,7 +87,7 @@ Follow these steps to model and deploy a minimal process from the Camunda Deskto
 - Save as `ai-fraud-check.bpmn` in your workspace folder.
 
 **Reference diagram and interface of the Camunda Desktop Modeler:**
-![AI Fraud Check BPMN](img.png)
+![AI Fraud Check BPMN](img/FirstModel.png)
 
 4) Configure the deployment target
 - Click the “Deploy” rocket icon in the bottom-left.
@@ -142,7 +148,7 @@ In this step, you will call an LLM from your process. You can either:
 During the workshop you will receive API credentials if needed. If you use LM Studio, start its local server and note the base URL (default: `http://localhost:1234/api/v0/chat/completions`).
 
 Add a Service Task to your BPMN and apply one of the connector options below.
-![LLM Service Task](../LLMTask.png)
+![LLM Service Task](img/LLMTask.png)
 
 ### Option A: OpenAI Connector
 Best for OpenAI API. In the Service Task properties, select a outbound Connector: OpenAI.
@@ -201,5 +207,82 @@ Map the LLM response to a process variable so you can inspect it in Operate or u
 - Model not found: Use a model name that exists locally (LM Studio) or in your provider account.
 - Invalid JSON body: Validate FEEL expressions and quotes in the request body
 
+## Reacting on the LLM result
+Now let’s extend the process to react to the LLM decision. We will:
+- Normalize the LLM text into a list variable `tasks`.
+- Use an Ad‑Hoc Subprocess to run the matching actions `human`, `email`, and/or `fraud`.
+- Detect fraud with a boolean `fraudDetected` and route with an Exclusive Gateway.
+- Model an escalation end for fraud and catch it at the parent scope.
+
+Here is the target blueprint of the flow:
+![Full reaction flow](img/FullProcess.png)
+
+Notes
+- This section assumes the LLM’s decision text is stored in variable `response` (e.g., `"email,human"` or `"fraud"`). 
+
+### Normalize the LLM output (Script Task)
+Add a Script Task named “Create List of Tasks”. We’ll convert the comma‑separated string into a clean list and also compute a fraud flag.
+
+Result variables is set to: `tasks`
+```
+{
+  "split(response, ",")"
+}
+```
+
+Explanation
+- `tasks` becomes a list like `["email", "human"]` or `["fraud"]`.
+
+### Drive an Ad-Hoc Subprocess from the list
+Add an Ad‑Hoc Subprocess after the Script Task.
+
+Inside the Ad‑Hoc Subprocess, add three activities (or start points) representing possible actions:
+- An activity with ID `human` for a User Task (human in the loop: approve/reject).
+- An activity with ID `email` for sending a notification email (can be a placeholder User Task for now).
+- An activity with ID `fraud` that will end in an Escalation Event (see next subsection).
+
+Configure the Ad‑Hoc Subprocess:
+- Collection of active elements: set to `tasks`.
+- Matching rule: items in `tasks` must match the activity IDs above. Ensure the activity IDs are exactly `human`, `email`, `fraud`.
+
+Tip
+- For the human review User Task, you can add a simple boolean variable `fraudDetected` that the user sets; you can use it in subsequent routing as needed.
+
+### Escalation for fraud detection
+If fraud is detected, we want to end the process through an escalation.
+
+Steps
+1) Create a global Escalation reference (e.g., Name `FraudDetected`, Code `fraud`).
+2) In the `fraud` path inside the Ad‑Hoc Subprocess, add an Escalation End Event referencing the same escalation.
+3) On the boundary of the parent subprocess or the enclosing activity, attach an Escalation Boundary Event that references the same global escalation.
+
+Reference
+![Escalation setup](img/Escalation.png)
+
+### Add gateway conditions
+Add an Exclusive Gateway with two outgoing sequence flows:
+- Flow A (fraud): Expression
+  ```
+  fraudDetected = true
+  ```
+- Flow B (no fraud): Expression
+  ```
+  not(fraudDetected)
+  ```
+
+Reference
+![Gateway conditions](img/Conditions.png)
+
+### Deploy and test the reaction flow
+1) Deploy the updated process definition.
+2) Start an instance with the same JSON variables as before.
+3) In Operate, inspect Variables after the Script Task:
+   - `tasks` should be a list (e.g., `["email","human"]`).
+   - `fraudDetected` should be `true` when `tasks` contains `"fraud"`.
+4) Verify behavior:
+   - When `response = "fraud"`, the escalation flow is taken.
+   - When `response` includes `human`, the User Task appears; complete it to continue.
+   - When `response` includes `email`, the email activity executes (placeholder if not fully implemented).
 
 
+ 
