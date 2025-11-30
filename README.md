@@ -20,6 +20,12 @@ code examples, and recommended practices to help you orchestrate intelligent age
    - [Escalation for fraud detection](#escalation-for-fraud-detection)
    - [Add gateway conditions](#add-gateway-conditions)
    - [Deploy and test the reaction flow](#deploy-and-test-the-reaction-flow)
+ - [Using Forms in Processes](#using-forms-in-processes)
+   - [Create a form in Camunda Modeler](#create-a-form-in-camunda-modeler)
+   - [Bind fields to process variables](#bind-fields-to-process-variables)
+   - [Link the form to a User Task](#link-the-form-to-a-user-task)
+   - [Deploy and test in Tasklist](#deploy-and-test-in-tasklist)
+   - [Troubleshooting (Forms)](#troubleshooting-forms)
 
 ## Prerequisites
 - OpenJDK 21–23: Required to run Camunda 8 Java components.
@@ -284,5 +290,51 @@ Reference
    - When `response` includes `human`, the User Task appears; complete it to continue.
    - When `response` includes `email`, the email activity executes (placeholder if not fully implemented).
 
+## Using Forms in Processes
+Forms make User Tasks friendlier and safer by validating input and binding fields to process variables.
+You can open Tasklist at http://localhost:8080/tasklist (or http://localhost:8088/tasklist if you started with Docker) to work on User Tasks.
 
- 
+### Create a form in Camunda Modeler
+1) In Camunda Desktop Modeler click the plus (+) in the top‑left and choose “Form”.
+2) Set a clear Form ID (for example `Form_CallExpert`). You will use this ID to link the form to a User Task.
+3) Drag components from the left panel onto the canvas (e.g., Text field, Number, Date, Checkbox, Text Area).
+
+Reference:
+![Form designer](img/Form.png)
+
+### Bind fields to process variables
+Each form field has a Key. The Key is the process variable name to read/write.
+
+- To display existing data from the process, use a field with Key equal to the variable name and set it to read‑only.
+- To collect new input, pick a suitable component and set:
+  - Label: what the user sees
+  - Key: variable name (e.g., `expertDecision`, `customerNote`)
+  - Type/Validation: required, min/max, pattern, etc.
+
+Example:
+- A Checkbox with Key `fraudDetected` will write a boolean into the process variables when the task is completed.
+- A Text Area with Key `humanNotes` will store a string with the reviewer’s notes.
+
+Reference:
+![Field options](img/FieldOptions.png)
+
+Tips:
+- If you only want to show data, toggle the component to Read‑only.
+
+### Link the form to a User Task
+1) In your BPMN diagram, select the User Task you want to attach the form to.
+2) In the properties panel, open the Form tab.
+3) Type: select “Camunda Form”.
+4) Form reference: enter the Form ID you created (e.g., `Form_CallExpert`).
+
+Reference
+![Link form to User Task](img/UserTaskLink.png)
+
+### Deploy and test in Tasklist
+1) Deploy your process and the form from the Modeler (click “Deploy”).
+2) Start a process instance (see earlier section for the sample JSON).
+3) Open Tasklist:
+   - Local C8Run: http://localhost:8080/tasklist
+   - Docker Compose: http://localhost:8088/tasklist
+4) Claim the task, fill out the form, and complete it.
+5) Open Operate and verify that the variables from your form (e.g., `fraudDetected`, `humanNotes`) are present and updated.
