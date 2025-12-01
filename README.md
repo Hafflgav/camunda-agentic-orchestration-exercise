@@ -167,9 +167,11 @@ Recommended fields:
       `= "You are a fraud assistant. Return only one or more of: email,human,fraud (comma-separated, lowercase)."`
   - User message:
     - Content (FEEL expression using process variables):
-      `= "Evaluate potential fraud for " || fullName || " (DOB " || dob || "). Total Income " || string(totalIncome) || 
-      ", Total Expenses " || string(totalExpenses) || ", Charitable Donations " || charitableDonations || 
-      ", Large purchases: " || string(join(largePurchases, ", "))`
+      `"=I’d like your opinion on if this hypothetical situation could be fraud or not." + fullName + " has submitted details of his economic status to a hypothetical government. They are as follow: Date of Birth" + string(dob) +
+" Total Income " + string(totalIncome) +
+" Total Expenses " + string(totalExpenses) +
+" Charitable Donations " + charitableDonations +
+" Large purchases " + string join(largePurchases , ", ") + " I’m going to need you to respond strictly in the following format: with nothing more than one, two or three of the following words separated by commas. ’email’ If the person submitting should be asked to clarify anything. also add ‘human’ if a human expert could be used in clarifying the submission. If neither option could justify the submission add the word ‘fraud'"`
 - Temperature: `0.2`
 
 
